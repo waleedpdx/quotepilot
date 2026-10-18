@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QuotePilot V2</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f2f5fa;color:#17243b;font:16px system-ui,-apple-system,Arial}header{background:#172d52;color:white;padding:22px 16px}header h1{margin:0;font-size:30px}header p{margin:6px 0;color:#c8d7ee}main{max-width:800px;margin:auto;padding:16px}.card{background:white;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #10204012}h2{margin:0 0 14px;font-size:21px}label{display:block;font-weight:650;margin:12px 0 5px}input,select,textarea{width:100%;padding:12px;border:1px solid #bdc9d9;border-radius:8px;font:inherit;background:white}textarea{min-height:75px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}.full{grid-column:1/-1}button{cursor:pointer;background:#2368db;color:white;border:0;border-radius:8px;padding:12px 16px;font:inherit;font-weight:650;margin:8px 5px 4px 0}.secondary{background:#e6ecf5;color:#172d52}.danger{background:#a63131}.item{border:1px solid #d7dfeb;border-radius:10px;padding:12px;margin:10px 0}.itemgrid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px}.total{text-align:right;font-size:27px;font-weight:750;color:#1765d5}.muted{color:#5c6b80;font-size:13px}.saved{border-top:1px solid #e0e5ed;padding:12px 0}.saved strong{display:block}#printArea{display:none}.summary{display:flex;justify-content:space-between;gap:10px}#status{font-weight:600;color:#265d36}@media(max-width:540px){.grid,.itemgrid{grid-template-columns:1fr}.full{grid-column:auto}button{width:100%;margin:6px 0}}@media print{body{background:white}header,main,#status{display:none!important}#printArea{display:block!important;padding:10mm;color:#111;font:12pt Arial}#printArea h1{font-size:26pt;margin-bottom:5px}#printArea table{width:100%;border-collapse:collapse;margin-top:20px}#printArea td,#printArea th{border-bottom:1px solid #ccc;padding:8px;text-align:left}#printArea .right{text-align:right}#printArea .note{white-space:pre-wrap}}
+</style>
+</head>
+<body>
+<header><h1>QuotePilot</h1><p>Professional contractor estimates · Version 2</p></header>
+<main>
+<section class="card"><h2>Your Business</h2><div class="grid">
+<div><label for="company">Company name</label><input id="company" placeholder="Your contracting company"></div>
+<div><label for="businessPhone">Business phone</label><input id="businessPhone" type="tel" placeholder="Phone"></div>
+<div class="full"><label for="businessEmail">Business email</label><input id="businessEmail" type="email" placeholder="Email"></div>
+<div class="full"><label for="license">License / registration (optional)</label><input id="license" placeholder="License number"></div>
+</div></section>
+<section class="card"><h2>Customer Details</h2><div class="grid">
+<div><label for="customer">Customer name</label><input id="customer" required placeholder="Customer name"></div>
+<div><label for="phone">Customer phone</label><input id="phone" type="tel" placeholder="Phone"></div>
+<div class="full"><label for="email">Customer email</label><input id="email" type="email" placeholder="Email"></div>
+<div class="full"><label for="address">Property address</label><input id="address" placeholder="Street, city, state, ZIP"></div>
+</div></section>
+<section class="card"><h2>Estimate Details</h2><div class="grid">
+<div><label for="estimateNumber">Estimate number</label><input id="estimateNumber" readonly></div>
+<div><label for="validUntil">Valid until</label><input id="validUntil" type="date"></div>
+<div class="full"><label for="service">Add a service</label><select id="service"><option>Gutter Cleaning - Single Story</option><option>Gutter Cleaning - Two Story</option><option>Roof Cleaning</option><option>Roofing</option><option>Siding</option><option>Interior Painting</option><option>Exterior Painting</option><option>Fencing</option><option>Decking</option><option>Kitchen Remodeling</option><option>Bathroom Remodeling</option><option>Custom Service</option></select></div>
+</div><button type="button" onclick="addItem()">+ Add Line Item</button><div id="items"></div>
+<label for="notes">Scope, exclusions, and notes</label><textarea id="notes" placeholder="Describe work, materials, exclusions and any conditions."></textarea>
+<div class="total" id="total">Total: $0.00</div>
+<button type="button" onclick="saveEstimate()">Save Estimate</button><button type="button" class="secondary" onclick="printEstimate()">Print / Save PDF</button><button type="button" class="secondary" onclick="newEstimate()">New Estimate</button><p class="muted">Estimates are stored only in this browser. Printing uses your device's print or PDF options. No email or text is sent automatically.</p><p id="status" role="status"></p>
+</section>
+<section class="card"><h2>Saved Estimates</h2><div id="saved"></div></section>
+</main><div id="printArea"></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const fields=['company','businessPhone','businessEmail','license','customer','phone','email','address','estimateNumber','validUntil','notes'];
+const money=n=>Number(n).toLocaleString('en-US',{style:'currency',currency:'USD'});
+const storageKey='quotepilot_v2_estimates';
+const today=()=>new Date().toISOString().slice(0,10);
+function getSaved(){try{const a=JSON.parse(localStorage.getItem(storageKey)||'[]');return Array.isArray(a)?a:[]}catch{return []}}
+function setStatus(s){$('status').textContent=s}
+function newEstimate(){fields.forEach(id=>{if(!['company','businessPhone','businessEmail','license'].includes(id))$(id).value=''});$('items').replaceChildren();$('estimateNumber').value='QP-'+Date.now().toString().slice(-9);let d=new Date();d.setDate(d.getDate()+30);$('validUntil').value=d.toISOString().slice(0,10);addItem();setStatus('New estimate ready.')}
+function addItem(description='',qty=1,unitPrice=0){const wrap=document.createElement('div');wrap.className='item';const row=document.createElement('div');row.className='itemgrid';const desc=document.createElement('input');desc.placeholder='Service / description';desc.setAttribute('aria-label','Line item description');desc.value=description||$('service').value;const quantity=document.createElement('input');quantity.type='number';quantity.min='0.01';quantity.step='any';quantity.value=qty;quantity.setAttribute('aria-label','Quantity');const price=document.createElement('input');price.type='number';price.min='0';price.step='0.01';price.value=unitPrice;price.setAttribute('aria-label','Unit price in dollars');row.append(desc,quantity,price);const remove=document.createElement('button');remove.className='secondary';remove.type='button';remove.textContent='Remove item';remove.onclick=()=>{wrap.remove();updateTotal()};wrap.append(row,remove);$('items').append(wrap);[quantity,price].forEach(e=>e.addEventListener('input',updateTotal));updateTotal()}
+function getItems(){return [...$('items').querySelectorAll('.item')].map(el=>{const [d,q,p]=el.querySelectorAll('input');return {description:d.value.trim(),quantity:Number(q.value),unitPrice:Number(p.value)}})}
+function updateTotal(){const total=getItems().reduce((s,i)=>s+(Number.isFinite(i.quantity)&&Number.isFinite(i.unitPrice)?i.quantity*i.unitPrice:0),0);$('total').textContent='Total: '+money(total);return total}
+function collect(){const obj={};fields.forEach(id=>obj[id]=$(id).value.trim());obj.items=getItems();obj.total=updateTotal();obj.created=today();return obj}
+function validate(q){if(!q.customer){alert('Enter the customer name.');return false}if(!q.company){alert('Enter your company name.');return false}if(!q.items.length||q.items.some(i=>!i.description||!Number.isFinite(i.quantity)||i.quantity<=0||!Number.isFinite(i.unitPrice)||i.unitPrice<0)){alert('Add valid line items with descriptions, positive quantities and nonnegative prices.');return false}return true}
+function saveEstimate(){const q=collect();if(!validate(q))return;const arr=getSaved();const pos=arr.findIndex(x=>x.estimateNumber===q.estimateNumber);if(pos>=0)arr[pos]=q;else arr.unshift(q);try{localStorage.setItem(storageKey,JSON.stringify(arr));renderSaved();setStatus('Estimate saved on this device.')}catch{alert('Browser storage is unavailable or full. Save a PDF instead.')}}
+function loadEstimate(number){const q=getSaved().find(x=>x.estimateNumber===number);if(!q)return;fields.forEach(id=>$(id).value=q[id]||'');$('items').replaceChildren();(q.items||[]).forEach(i=>addItem(i.description,i.quantity,i.unitPrice));updateTotal();setStatus('Saved estimate loaded.');window.scrollTo(0,0)}
+function renderSaved(){const root=$('saved');root.replaceChildren();const arr=getSaved();if(!arr.length){root.textContent='No Version 2 estimates saved yet.';return}arr.forEach(q=>{const box=document.createElement('div');box.className='saved';const name=document.createElement('strong');name.textContent=(q.customer||'Customer')+' — '+money(q.total||0);const details=document.createElement('div');details.className='muted';details.textContent=(q.estimateNumber||'')+' · '+(q.created||'');const btn=document.createElement('button');btn.className='secondary';btn.textContent='Open estimate';btn.onclick=()=>loadEstimate(q.estimateNumber);box.append(name,details,btn);root.append(box)})}
+function addText(parent,tag,value){const e=document.createElement(tag);e.textContent=value||'';parent.append(e);return e}
+function printEstimate(){const q=collect();if(!validate(q))return;const p=$('printArea');p.replaceChildren();addText(p,'h1','ESTIMATE');addText(p,'h2',q.company);addText(p,'p',[q.businessPhone,q.businessEmail,q.license?'License: '+q.license:''].filter(Boolean).join(' · '));addText(p,'p','Estimate #: '+q.estimateNumber+' | Date: '+today()+' | Valid until: '+q.validUntil);addText(p,'h3','Prepared for');addText(p,'p',[q.customer,q.phone,q.email,q.address].filter(Boolean).join(' | '));const table=document.createElement('table');const head=document.createElement('tr');['Description','Qty','Unit price','Amount'].forEach(t=>addText(head,'th',t));table.append(head);q.items.forEach(i=>{const tr=document.createElement('tr');[i.description,String(i.quantity),money(i.unitPrice),money(i.quantity*i.unitPrice)].forEach(t=>addText(tr,'td',t));table.append(tr)});p.append(table);addText(p,'h2','Total: '+money(q.total));if(q.notes){addText(p,'h3','Scope and notes');const n=addText(p,'p',q.notes);n.className='note'}window.print()}
+newEstimate();renderSaved();
+</script>
+</body></html>
