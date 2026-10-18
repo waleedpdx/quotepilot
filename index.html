@@ -1,1 +1,124 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuotePilot</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6fb;font-family:Arial,sans-serif;color:#17243a}
+header{background:#142b50;color:white;padding:22px}
+header h1{margin:0}
+header p{margin:6px 0 0;color:#cbd8ec}
+main{max-width:650px;margin:auto;padding:18px}
+.card{background:white;border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 2px 10px #0001}
+h2{margin-top:0;font-size:21px}
+label{display:block;margin:14px 0 6px;font-weight:bold}
+input,select{width:100%;padding:13px;border:1px solid #ccd5e2;border-radius:8px;font-size:16px}
+button{background:#1769e0;color:white;border:0;border-radius:8px;padding:14px;width:100%;font-size:16px;font-weight:bold;margin-top:16px}
+.total{font-size:32px;font-weight:bold;color:#1769e0}
+.quote{border-top:1px solid #ddd;padding:14px 0}
+small{color:#65748b}
+</style>
+</head>
+<body>
+<header>
+<h1>QuotePilot</h1>
+<p>Contractor Estimates Made Simple</p>
+</header>
+<main>
+<div class="card">
+<h2>Create New Estimate</h2>
+<label>Customer Name</label>
+<input id="customer" placeholder="John Smith">
+<label>Phone Number</label>
+<input id="phone" type="tel" placeholder="555-123-4567">
+<label>Service</label>
+<select id="service">
+<option value="149">Gutter Cleaning - Single Story</option>
+<option value="199">Gutter Cleaning - Two Story</option>
+<option value="350">Roof Cleaning</option>
+<option value="500">House Painting</option>
+<option value="1000">Roofing</option>
+<option value="750">Siding</option>
+<option value="400">Fencing</option>
+<option value="600">Decking</option>
+<option value="1500">Kitchen Remodeling</option>
+<option value="1500">Bathroom Remodeling</option>
+<option value="0">Custom Service</option>
+</select>
+<label>Estimated Price ($)</label>
+<input id="price" type="number" min="0" step="0.01">
+<button onclick="calculate()">Calculate Estimate</button>
+<div id="result" hidden>
+<h3>Estimated Total</h3>
+<div class="total" id="total"></div>
+<button onclick="saveQuote()">Save Estimate</button>
+</div>
+</div>
+<div class="card">
+<h2>Saved Estimates</h2>
+<div id="quotes"></div>
+</div>
+</main>
+<script>
+const service=document.getElementById("service");
+const price=document.getElementById("price");
+let current=null;
+price.value=service.value;
+service.addEventListener("change",()=>{
+price.value=service.value;
+document.getElementById("result").hidden=true;
+});
+function calculate(){
+const name=document.getElementById("customer").value.trim();
+const amount=Number(price.value);
+if(!name||price.value===""||!Number.isFinite(amount)||amount<0){
+alert("Enter a customer name and valid price.");
+return;
+}
+current={
+name,
+phone:document.getElementById("phone").value.trim(),
+service:service.options[service.selectedIndex].text,
+amount,
+date:new Date().toLocaleDateString()
+};
+document.getElementById("total").textContent=
+amount.toLocaleString("en-US",{style:"currency",currency:"USD"});
+document.getElementById("result").hidden=false;
+}
+function saveQuote(){
+if(!current)return;
+try{
+const quotes=JSON.parse(localStorage.getItem("quotepilot_quotes")||"[]");
+quotes.unshift(current);
+localStorage.setItem("quotepilot_quotes",JSON.stringify(quotes));
+showQuotes();
+alert("Estimate saved on this device.");
+}catch(e){alert("Unable to save estimate in this browser.");}
+}
+function showQuotes(){
+const container=document.getElementById("quotes");
+container.replaceChildren();
+let quotes=[];
+try{quotes=JSON.parse(localStorage.getItem("quotepilot_quotes")||"[]");}
+catch(e){}
+if(!quotes.length){container.textContent="No estimates saved yet.";return;}
+quotes.forEach(q=>{
+const div=document.createElement("div");
+div.className="quote";
+const title=document.createElement("strong");
+title.textContent=q.name+" - $"+Number(q.amount).toFixed(2);
+const detail=document.createElement("p");
+detail.textContent=q.service+" | "+q.date;
+div.append(title,detail);
+container.appendChild(div);
+});
+}
+showQuotes();
+</script>
+</body>
+</html>
+
